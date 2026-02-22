@@ -3,6 +3,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -124,21 +125,27 @@ func (m *Monitor) reserveJobs(ctx context.Context, queueKey string, jobs []stack
 
 func (m *Monitor) runJob(ctx context.Context, jobUUID string) error {
 	// This will eventually get farmed out to a sprite registry
-	spr := sprites.AgentSprite{
-		Name: "bk-test-1",
-	}
+	spr := sprites.NewAgentSprite("bk-test-1")
 
-	err := spr.RunJob(jobUUID)
-	if err != nil {
-		log.Error("there was an error running the job", "error", err)
-		err = m.finishJob(ctx, m.queue, jobUUID, fmt.Sprintf("%v", err))
+	healthy, err := m.CheckSpriteHealth(spr.Address, "8080")
+	if err != nil || !healthy {
+		log.Error("big ol problem I think", "error", err)
+		return err
+	}
+	if healthy {
+		err = spr.RunJob(jobUUID)
 		if err != nil {
-			log.Error("failed to fail job", "error", err)
+			log.Error("there was an error running the job", "error", err)
+			err = m.finishJob(ctx, m.queue, jobUUID, fmt.Sprintf("%v", err))
+			if err != nil {
+				log.Error("failed to fail job", "error", err)
+			}
 		}
-	}
 
-	log.Info("ran job", "job", "jobUUID")
-	return nil
+		log.Info("ran job", "job", "jobUUID")
+		return nil
+	}
+	return errors.New("funchere was an error running the job")
 }
 
 // finishJob returns a status back to Buildkite to surface failures starting an agent

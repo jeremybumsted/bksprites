@@ -22,8 +22,22 @@ const (
 )
 
 type AgentSprite struct {
-	Name string // This is the name of the sprite the agent will be run on.
+	Name    string // This is the name of the sprite the agent will be run on.
+	Address string // This is the ip address of the sprite
 	// command sprites.Command  <- Don't know if this is useful yet.
+}
+
+func NewAgentSprite(name string) *AgentSprite {
+	spriteAuthToken := os.Getenv("SPRITE_API_TOKEN")
+	client := sprites.New(spriteAuthToken)
+	sprite := client.Sprite(name)
+
+	addr := sprite.URL
+
+	return &AgentSprite{
+		Name:    name,
+		Address: addr,
+	}
 }
 
 func (a *AgentSprite) RunJob(jobUUID string) error {
