@@ -1,23 +1,76 @@
+// Package sprites provides an interface for invoking the
+// buildkite agent on a Fly.io Sprite
 package sprites
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/charmbracelet/log"
 	sprites "github.com/superfly/sprites-go"
 )
 
-func RunJob(jobUUID string) error {
+const (
+	spriteCommandTimeout = 5 * time.Minute
+	spriteRunMaxAttempts = 3
+	spriteRetryDelay     = 2 * time.Second
+)
+
+type AgentSprite struct {
+	Name string // This is the name of the sprite the agent will be run on.
+	// command sprites.Command  <- Don't know if this is useful yet.
+}
+
+func (a *AgentSprite) RunJob(jobUUID string) error {
+	log.Info("We'll run this job", "uuid", jobUUID)
+
 	spriteAuthToken := os.Getenv("SPRITE_API_TOKEN")
 	client := sprites.New(spriteAuthToken)
+	sprite := client.Sprite(a.Name)
 
-	sprite := client.Sprite("bk-test-1")
+	var err error
+	for attempt := 1; attempt <= spriteRunMaxAttempts; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), spriteCommandTimeout)
+		cmd := sprite.CommandContext(ctx, ".buildkite-agent/bin/buildkite-agent", "start", "--acquire-job", jobUUID, "--skip-checkout")
+		err = cmd.Run()
+		cancel()
 
-	cmd := sprite.Command("buildkite-agent", "start", "--acquire-job", jobUUID, "--skip-checkout")
-	output, err := cmd.Output()
-	if err != nil {
-		return err
+		if err == nil {
+			return nil
+		}
+
+		if !isRetryableRunError(err) || attempt == spriteRunMaxAttempts {
+			return fmt.Errorf("failed to start sprite command after %d attempt(s): %w", attempt, err)
+		}
+
+		delay := spriteRetryDelay * time.Duration(1<<(attempt-1))
+		log.Warn("Sprite run attempt failed, retrying",
+			"sprite", a.Name,
+			"jobUUID", jobUUID,
+			"attempt", attempt,
+			"maxAttempts", spriteRunMaxAttempts,
+			"retryIn", delay,
+			"error", err,
+		)
+		time.Sleep(delay)
 	}
-	fmt.Printf("Output: %s", output)
-	return nil
+
+	return fmt.Errorf("failed to start sprite command: %w", err)
+}
+
+func isRetryableRunError(err error) bool {
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "i/o timeout") ||
+		strings.Contains(msg, "failed to connect") ||
+		strings.Contains(msg, "connection reset by peer")
 }

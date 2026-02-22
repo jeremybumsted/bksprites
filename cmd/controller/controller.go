@@ -64,7 +64,7 @@ func (c *ControllerCmd) Run() error {
 
 	<-signalChan
 
-	log.Info("Deregsitering stack %v...", stack.Key)
+	log.Info(fmt.Sprintf("Deregistering stack %v...", stack.Key))
 	_, err = client.DeregisterStack(context.Background(), stack.Key)
 	if err != nil {
 		log.Error("There was an error deregistering the stack", "error", err)
@@ -74,15 +74,7 @@ func (c *ControllerCmd) Run() error {
 	log.Info("Shutting down now, buh-bye!")
 
 	//TODO, add the following
+	// - Finish a job:
 	//
-	//Register the stack
-	//
-	// Fetch scheduled Jobs
-	//
-	// Get Job Details
-	//
-	// Finish a job
-	//
-	// Degister
 	return nil
 }
