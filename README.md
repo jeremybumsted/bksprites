@@ -35,4 +35,4 @@ PRs welcome, this is just an experimental repo to play with Sprites and the Stac
 
 # License
 
-See [LICENSE.md]
+See [LICENSE](/LICENSE)
