@@ -50,7 +50,7 @@ func (a *AgentSprite) RunJob(jobUUID string) error {
 	var err error
 	for attempt := 1; attempt <= spriteRunMaxAttempts; attempt++ {
 		ctx, cancel := context.WithTimeout(context.Background(), spriteCommandTimeout)
-		cmd := sprite.CommandContext(ctx, ".buildkite-agent/bin/buildkite-agent", "start", "--acquire-job", jobUUID, "--skip-checkout")
+		cmd := sprite.CommandContext(ctx, ".buildkite-agent/bin/buildkite-agent", "start", "--acquire-job", jobUUID)
 		err = cmd.Run()
 		cancel()
 

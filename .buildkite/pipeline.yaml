@@ -2,4 +2,4 @@ agents:
   queue: sprites
 steps:
   - label: ":fly-io: Test Fly Builds"
-    command: echo "Hello from Sprites"
+    command: mise trust -y && mise install && gotestsum --format testname ./internal/...
