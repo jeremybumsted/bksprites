@@ -1,0 +1,604 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>monitor: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/jeremybumsted/bksprites/internal/monitor/monitor.go (5.4%)</option>
+				
+				<option value="file1">github.com/jeremybumsted/bksprites/internal/monitor/sprites.go (100.0%)</option>
+				
+				<option value="file2">github.com/jeremybumsted/bksprites/internal/spriteman/server.go (53.8%)</option>
+				
+				<option value="file3">github.com/jeremybumsted/bksprites/internal/sprites/sprite.go (35.7%)</option>
+				
+				<option value="file4">github.com/jeremybumsted/bksprites/internal/store/job.go (92.3%)</option>
+				
+				<option value="file5">github.com/jeremybumsted/bksprites/internal/store/store.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package monitor watches the configured Buildkite queue on an interval configured by `interval`
+package monitor
+
+import (
+        "context"
+        "fmt"
+        "time"
+
+        "github.com/buildkite/stacksapi"
+        "github.com/charmbracelet/log"
+
+        "github.com/jeremybumsted/bksprites/internal/sprites"
+)
+
+type Monitor struct {
+        client   *stacksapi.Client
+        stackKey string
+        queue    string
+        interval time.Duration
+}
+
+func NewMonitor(client *stacksapi.Client, stackKey string, queue string, interval time.Duration) *Monitor <span class="cov8" title="1">{
+        return &amp;Monitor{
+                client:   client,
+                stackKey: stackKey,
+                queue:    queue,
+                interval: interval,
+        }
+}</span>
+
+func (m *Monitor) Start(ctx context.Context) error <span class="cov0" title="0">{
+        ticker := time.NewTicker(m.interval)
+        defer ticker.Stop()
+
+        log.Info(fmt.Sprintf("Starting monitor for queue: %s", m.queue))
+
+        for </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        log.Info("Monitor shutting down")
+                        return ctx.Err()</span>
+                case &lt;-ticker.C:<span class="cov0" title="0">
+                        if err := m.pollQueue(ctx, m.queue); err != nil </span><span class="cov0" title="0">{
+                                log.Error("Error polling queue", "error", err)
+                        }</span>
+                }
+        }
+}
+
+func (m *Monitor) pollQueue(ctx context.Context, queueKey string) error <span class="cov0" title="0">{
+        var cursor string
+        jobsProcessed := 0
+
+        for </span><span class="cov0" title="0">{
+                resp, _, err := m.client.ListScheduledJobs(ctx, stacksapi.ListScheduledJobsRequest{
+                        StackKey:        m.stackKey,
+                        ClusterQueueKey: queueKey,
+                        PageSize:        50,
+                        StartCursor:     cursor,
+                })
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("listing scheduled jobs: %w", err)
+                }</span>
+
+                <span class="cov0" title="0">if resp.ClusterQueue.Paused </span><span class="cov0" title="0">{
+                        log.Info("Queue is paused, skipping")
+                        return nil
+                }</span>
+
+                <span class="cov0" title="0">if len(resp.Jobs) &gt; 0 </span><span class="cov0" title="0">{
+                        if err := m.reserveJobs(ctx, queueKey, resp.Jobs); err != nil </span><span class="cov0" title="0">{
+                                log.Error("Error reserving jobs", "error", err)
+                        }</span> else<span class="cov0" title="0"> {
+                                jobsProcessed += len(resp.Jobs)
+                        }</span>
+                }
+
+                <span class="cov0" title="0">if !resp.PageInfo.HasNextPage </span><span class="cov0" title="0">{
+                        break</span>
+                }
+                <span class="cov0" title="0">cursor = resp.PageInfo.EndCursor</span>
+        }
+        <span class="cov0" title="0">if jobsProcessed &gt; 0 </span><span class="cov0" title="0">{
+                log.Info(fmt.Sprintf("Processed %v jobs on queue %v", jobsProcessed, queueKey))
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (m *Monitor) reserveJobs(ctx context.Context, queueKey string, jobs []stacksapi.ScheduledJob) error <span class="cov8" title="1">{
+        if len(jobs) == 0 </span><span class="cov8" title="1">{
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">jobUUIDs := make([]string, len(jobs))
+        for i, job := range jobs </span><span class="cov0" title="0">{
+                jobUUIDs[i] = job.ID
+        }</span>
+
+        <span class="cov0" title="0">reserveRequest := stacksapi.BatchReserveJobsRequest{
+                StackKey:                 m.stackKey,
+                JobUUIDs:                 jobUUIDs,
+                ReservationExpirySeconds: 30, // Let's default to 30, but this can be a config value later
+        }
+
+        resp, _, err := m.client.BatchReserveJobs(ctx, reserveRequest)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error("failed to reserve jobs", "error", err)
+        }</span>
+        <span class="cov0" title="0">if len(resp.NotReserved) &gt; 0 </span><span class="cov0" title="0">{
+                log.Warn("Some jobs were not reserved", "Not Reserved", resp.NotReserved)
+        }</span>
+        <span class="cov0" title="0">if len(resp.Reserved) &gt; 0 </span><span class="cov0" title="0">{
+                log.Info("Reserved jobs, running on agent sprites")
+
+                for i := 0; i &lt; len(resp.Reserved); i++ </span><span class="cov0" title="0">{
+                        err = m.runJob(ctx, resp.Reserved[i])
+                        if err != nil </span><span class="cov0" title="0">{
+                                log.Error("error running jobs", "error", err)
+                        }</span>
+                }
+        }
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (m *Monitor) runJob(ctx context.Context, jobUUID string) error <span class="cov0" title="0">{
+        // This will eventually get farmed out to a sprite registry
+        spr := sprites.NewAgentSprite("bk-test-1")
+
+        if err := spr.RunJob(jobUUID); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+// finishJob returns a status back to Buildkite to surface failures starting an agent
+func (m *Monitor) finishJob(ctx context.Context, queueKey string, job string, msg string) error <span class="cov0" title="0">{
+        req := stacksapi.FinishJobRequest{
+                StackKey:   m.stackKey,
+                JobUUID:    job,
+                ExitStatus: -1,
+                Detail:     msg,
+        }
+        _, err := m.client.FinishJob(ctx, req)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Error("failed to finish the job", "error", err)
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package monitor
+
+// We need to make sure that a sprite is warmed, able to accept jobs,
+// and otherwise healthy, so we have a few methods to do this.
+
+import (
+        "errors"
+        "fmt"
+        "net/http"
+
+        "github.com/charmbracelet/log"
+)
+
+// CheckSpriteHealth checks to ensure the sprite is active and the server is running
+// this has the added benefit of making the sprite warm if it is currently
+// cold for autoscaling purposes
+func (m *Monitor) CheckSpriteHealth(addr string, port string) (bool, error) <span class="cov8" title="1">{
+        if port == "" </span><span class="cov8" title="1">{
+                port = "8080"
+        }</span>
+        <span class="cov8" title="1">url := fmt.Sprintf("http://%v:%v/health", addr, port)
+
+        resp, err := http.Get(url)
+        if err != nil </span><span class="cov8" title="1">{
+                log.Error("Error creating the request", "error", err)
+                return false, err
+        }</span>
+        <span class="cov8" title="1">defer resp.Body.Close()
+        if resp.StatusCode != http.StatusOK </span><span class="cov8" title="1">{
+                err := errors.New("sprite did not return 200, unhealthy")
+                return false, err
+        }</span>
+
+        <span class="cov8" title="1">return true, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package spriteman
+
+// spriteman aims to act as the manager of the current sprite, reporting
+// capacity back to the controller so that it can intelligently assign
+// jobs to a sprite in the pool.
+
+import (
+        "context"
+        "encoding/json"
+        "io"
+        "net/http"
+        "time"
+
+        "github.com/charmbracelet/log"
+)
+
+type Manager struct {
+        maxAgents int
+        interval  time.Duration
+}
+
+type JobRequest struct {
+        JobUUID string `json:"job_uuid"`
+}
+
+func NewManager(maxAgents int, interval time.Duration) *Manager <span class="cov8" title="1">{
+        return &amp;Manager{
+                maxAgents: maxAgents,
+                interval:  interval,
+        }
+}</span>
+
+func (m *Manager) Start(ctx context.Context) error <span class="cov0" title="0">{
+        log.Info("Starting spriteman server...")
+
+        mux := http.NewServeMux()
+        mux.HandleFunc("/job", jobHandler)
+        mux.HandleFunc("/health", healthHandler)
+
+        addr := ":8080"
+        log.Info("Server started", "port", addr)
+        if err := http.ListenAndServe(addr, mux); err != nil </span><span class="cov0" title="0">{
+                log.Fatal("Server error", "error", err)
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        w.WriteHeader(http.StatusOK)
+}</span>
+
+func jobHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        if r.Method != http.MethodPost </span><span class="cov8" title="1">{
+                http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+                return
+        }</span>
+
+        <span class="cov8" title="1">body, err := io.ReadAll(r.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                http.Error(w, "failed to read request body", http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov8" title="1">var payload JobRequest
+        if err := json.Unmarshal(body, &amp;payload); err != nil </span><span class="cov8" title="1">{
+                http.Error(w, "Invalid request body", http.StatusBadRequest)
+                return
+        }</span>
+
+        <span class="cov8" title="1">log.Info("Received job request", "jobUUID", payload.JobUUID)
+
+        // We'll do some stuff with the request to fire up an agent here
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte(`{"status":"success"`))</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// Package sprites provides an interface for invoking the
+// buildkite agent on a Fly.io Sprite
+package sprites
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "net"
+        "os"
+        "strings"
+        "time"
+
+        "github.com/charmbracelet/log"
+        sprites "github.com/superfly/sprites-go"
+)
+
+const (
+        spriteCommandTimeout = 5 * time.Minute
+        spriteRunMaxAttempts = 3
+        spriteRetryDelay     = 2 * time.Second
+)
+
+type AgentSprite struct {
+        Name    string // This is the name of the sprite the agent will be run on.
+        Address string // This is the ip address of the sprite
+        // command sprites.Command  &lt;- Don't know if this is useful yet.
+}
+
+func NewAgentSprite(name string) *AgentSprite <span class="cov8" title="1">{
+        spriteAuthToken := os.Getenv("SPRITE_API_TOKEN")
+        client := sprites.New(spriteAuthToken)
+        sprite := client.Sprite(name)
+
+        addr := sprite.URL
+
+        return &amp;AgentSprite{
+                Name:    name,
+                Address: addr,
+        }
+}</span>
+
+func (a *AgentSprite) RunJob(jobUUID string) error <span class="cov0" title="0">{
+        log.Info("We'll run this job", "uuid", jobUUID)
+
+        spriteAuthToken := os.Getenv("SPRITE_API_TOKEN")
+        client := sprites.New(spriteAuthToken)
+        sprite := client.Sprite(a.Name)
+
+        var err error
+        for attempt := 1; attempt &lt;= spriteRunMaxAttempts; attempt++ </span><span class="cov0" title="0">{
+                ctx, cancel := context.WithTimeout(context.Background(), spriteCommandTimeout)
+                cmd := sprite.CommandContext(ctx, ".buildkite-agent/bin/buildkite-agent", "start", "--acquire-job", jobUUID, "--skip-checkout")
+                err = cmd.Run()
+                cancel()
+
+                if err == nil </span><span class="cov0" title="0">{
+                        return nil
+                }</span>
+
+                <span class="cov0" title="0">if !isRetryableRunError(err) || attempt == spriteRunMaxAttempts </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to start sprite command after %d attempt(s): %w", attempt, err)
+                }</span>
+
+                <span class="cov0" title="0">delay := spriteRetryDelay * time.Duration(1&lt;&lt;(attempt-1))
+                log.Warn("Sprite run attempt failed, retrying",
+                        "sprite", a.Name,
+                        "jobUUID", jobUUID,
+                        "attempt", attempt,
+                        "maxAttempts", spriteRunMaxAttempts,
+                        "retryIn", delay,
+                        "error", err,
+                )
+                time.Sleep(delay)</span>
+        }
+
+        <span class="cov0" title="0">return fmt.Errorf("failed to start sprite command: %w", err)</span>
+}
+
+func isRetryableRunError(err error) bool <span class="cov8" title="1">{
+        var netErr net.Error
+        if errors.As(err, &amp;netErr) &amp;&amp; netErr.Timeout() </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">msg := strings.ToLower(err.Error())
+        return strings.Contains(msg, "i/o timeout") ||
+                strings.Contains(msg, "failed to connect") ||
+                strings.Contains(msg, "connection reset by peer")</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package store
+
+import (
+        "encoding/json"
+
+        "github.com/jeremybumsted/bksprites/internal/models"
+)
+
+type bkJob models.Job
+
+type Job interface {
+        Set(id string, j bkJob) error
+        Get(id string) (bkJob, bool, error)
+        Delete(id string) error
+}
+
+type jobStore struct {
+        store *Store
+}
+
+func NewJobStore(store *Store) *jobStore <span class="cov8" title="1">{
+        return &amp;jobStore{
+                store: store,
+        }
+}</span>
+
+func (js *jobStore) Set(id string, j bkJob) error <span class="cov8" title="1">{
+        b, err := json.Marshal(j)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">return js.store.Set("job:"+id, string(b), 0)</span>
+}
+
+func (js *jobStore) Get(id string) (bkJob, bool, error) <span class="cov8" title="1">{
+        raw, ok := js.store.Get("job:" + id)
+        if !ok </span><span class="cov8" title="1">{
+                return bkJob{}, false, nil
+        }</span>
+
+        <span class="cov8" title="1">var j bkJob
+
+        if err := json.Unmarshal([]byte(raw), &amp;j); err != nil </span><span class="cov8" title="1">{
+                return bkJob{}, false, err
+        }</span>
+
+        <span class="cov8" title="1">return j, true, nil</span>
+}
+
+func (js *jobStore) Delete(id string) error <span class="cov8" title="1">{
+        return js.store.Delete("job:" + id)
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">// Package store provides the interface for storing
+// Job and SpriteData for the controller
+package store
+
+import (
+        "errors"
+        "sync"
+        "time"
+)
+
+var ErrStoreFull = errors.New("storage full")
+
+type Store struct {
+        mu      sync.RWMutex
+        data    map[string]entry
+        maxKeys int
+        ttl     time.Duration
+}
+
+type entry struct {
+        value     string
+        expiresAt time.Time
+}
+
+func NewStore() *Store <span class="cov8" title="1">{
+        maxAge, _ := time.ParseDuration("10m")
+
+        return &amp;Store{
+                data:    make(map[string]entry),
+                maxKeys: 1000,
+                ttl:     maxAge,
+        }
+}</span>
+
+func (s *Store) Set(key, value string, ttl time.Duration) error <span class="cov8" title="1">{
+        s.mu.Lock()
+        defer s.mu.Unlock()
+
+        if s.maxKeys &gt; 0 &amp;&amp; len(s.data) &gt;= s.maxKeys </span><span class="cov8" title="1">{
+                if _, exists := s.data[key]; !exists </span><span class="cov8" title="1">{
+                        return ErrStoreFull
+                }</span>
+        }
+
+        <span class="cov8" title="1">e := entry{value: value}
+        if ttl &gt; 0 </span><span class="cov8" title="1">{
+                e.expiresAt = time.Now().Add(ttl)
+        }</span>
+
+        <span class="cov8" title="1">s.data[key] = e
+        return nil</span>
+}
+
+func (s *Store) Get(key string) (string, bool) <span class="cov8" title="1">{
+        s.mu.RLock()
+        defer s.mu.RUnlock()
+
+        var e entry
+
+        e, ok := s.data[key]
+        if !ok </span><span class="cov8" title="1">{
+                return "", false
+        }</span>
+
+        <span class="cov8" title="1">if !e.expiresAt.IsZero() &amp;&amp; time.Now().After(e.expiresAt) </span><span class="cov8" title="1">{
+                return "", false
+        }</span>
+
+        <span class="cov8" title="1">return e.value, true</span>
+}
+
+func (s *Store) Delete(key string) error <span class="cov8" title="1">{
+        s.mu.Lock()
+        defer s.mu.Unlock()
+
+        delete(s.data, key)
+        return nil
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

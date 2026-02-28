@@ -3,7 +3,6 @@ package monitor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -127,25 +126,11 @@ func (m *Monitor) runJob(ctx context.Context, jobUUID string) error {
 	// This will eventually get farmed out to a sprite registry
 	spr := sprites.NewAgentSprite("bk-test-1")
 
-	healthy, err := m.CheckSpriteHealth(spr.Address, "8080")
-	if err != nil || !healthy {
-		log.Error("big ol problem I think", "error", err)
+	if err := spr.RunJob(jobUUID); err != nil {
 		return err
 	}
-	if healthy {
-		err = spr.RunJob(jobUUID)
-		if err != nil {
-			log.Error("there was an error running the job", "error", err)
-			err = m.finishJob(ctx, m.queue, jobUUID, fmt.Sprintf("%v", err))
-			if err != nil {
-				log.Error("failed to fail job", "error", err)
-			}
-		}
 
-		log.Info("ran job", "job", "jobUUID")
-		return nil
-	}
-	return errors.New("funchere was an error running the job")
+	return nil
 }
 
 // finishJob returns a status back to Buildkite to surface failures starting an agent
