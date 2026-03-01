@@ -9,7 +9,9 @@ import (
 	"github.com/buildkite/stacksapi"
 	"github.com/charmbracelet/log"
 
+	"github.com/jeremybumsted/bksprites/internal/models"
 	"github.com/jeremybumsted/bksprites/internal/sprites"
+	"github.com/jeremybumsted/bksprites/internal/store"
 )
 
 type Monitor struct {
@@ -17,14 +19,19 @@ type Monitor struct {
 	stackKey string
 	queue    string
 	interval time.Duration
+	jobStore *store.JobStore
 }
 
 func NewMonitor(client *stacksapi.Client, stackKey string, queue string, interval time.Duration) *Monitor {
+	s := store.NewStore()
+	js := store.NewJobStore(s)
+
 	return &Monitor{
 		client:   client,
 		stackKey: stackKey,
 		queue:    queue,
 		interval: interval,
+		jobStore: js,
 	}
 }
 
@@ -40,15 +47,22 @@ func (m *Monitor) Start(ctx context.Context) error {
 			log.Info("Monitor shutting down")
 			return ctx.Err()
 		case <-ticker.C:
-			if err := m.pollQueue(ctx, m.queue); err != nil {
+			jobList, err := m.pollQueue(ctx, m.queue)
+			if err != nil {
 				log.Error("Error polling queue", "error", err)
 			}
+
+			if err = m.reserveJobs(ctx, jobList); err != nil {
+				log.Error("Error reserving jobs", "error", err)
+			}
+
 		}
 	}
 }
 
-func (m *Monitor) pollQueue(ctx context.Context, queueKey string) error {
+func (m *Monitor) pollQueue(ctx context.Context, queueKey string) ([]stacksapi.ScheduledJob, error) {
 	var cursor string
+	var jobList []stacksapi.ScheduledJob
 	jobsProcessed := 0
 
 	for {
@@ -59,20 +73,16 @@ func (m *Monitor) pollQueue(ctx context.Context, queueKey string) error {
 			StartCursor:     cursor,
 		})
 		if err != nil {
-			return fmt.Errorf("listing scheduled jobs: %w", err)
+			return nil, fmt.Errorf("listing scheduled jobs: %w", err)
 		}
 
 		if resp.ClusterQueue.Paused {
 			log.Info("Queue is paused, skipping")
-			return nil
+			return nil, nil
 		}
 
 		if len(resp.Jobs) > 0 {
-			if err := m.reserveJobs(ctx, queueKey, resp.Jobs); err != nil {
-				log.Error("Error reserving jobs", "error", err)
-			} else {
-				jobsProcessed += len(resp.Jobs)
-			}
+			jobsProcessed += len(resp.Jobs)
 		}
 
 		if !resp.PageInfo.HasNextPage {
@@ -83,23 +93,43 @@ func (m *Monitor) pollQueue(ctx context.Context, queueKey string) error {
 	if jobsProcessed > 0 {
 		log.Info(fmt.Sprintf("Processed %v jobs on queue %v", jobsProcessed, queueKey))
 	}
-	return nil
+	return jobList, nil
 }
 
-func (m *Monitor) reserveJobs(ctx context.Context, queueKey string, jobs []stacksapi.ScheduledJob) error {
+func (m *Monitor) reserveJobs(ctx context.Context, jobs []stacksapi.ScheduledJob) error {
 	if len(jobs) == 0 {
 		return nil
 	}
 
 	jobUUIDs := make([]string, len(jobs))
 	for i, job := range jobs {
+		bkJob := models.Job{
+			Priority:        job.Priority,
+			AgentQueryRules: job.AgentQueryRules,
+			ScheduledAt:     job.ScheduledAt,
+			Pipeline: models.Pipeline{
+				Slug: job.Pipeline.Slug,
+				UUID: job.Pipeline.UUID,
+			},
+			Build: models.Build{
+				Number: job.Build.Number,
+				Branch: job.Build.Branch,
+				UUID:   job.Build.UUID,
+			},
+			Step: models.Step{
+				Key: job.Step.Key,
+			},
+		}
+		if err := m.jobStore.Set(job.ID, bkJob); err != nil {
+			return err
+		}
 		jobUUIDs[i] = job.ID
 	}
 
 	reserveRequest := stacksapi.BatchReserveJobsRequest{
 		StackKey:                 m.stackKey,
 		JobUUIDs:                 jobUUIDs,
-		ReservationExpirySeconds: 30, // Let's default to 30, but this can be a config value later
+		ReservationExpirySeconds: 30, // Let's default to 30, but this can be a config value later, realistically it shouldn't take more than 30 seconds to start a job.
 	}
 
 	resp, _, err := m.client.BatchReserveJobs(ctx, reserveRequest)
@@ -107,15 +137,23 @@ func (m *Monitor) reserveJobs(ctx context.Context, queueKey string, jobs []stack
 		log.Error("failed to reserve jobs", "error", err)
 	}
 	if len(resp.NotReserved) > 0 {
+		for i := 0; i < len(resp.NotReserved); i++ {
+			job := resp.NotReserved[i]
+			if err = m.jobStore.Delete(job); err != nil {
+				log.Error("failed to delete job from the job store, but the job is not reserved on Buildkite", "error", err)
+			}
+		}
 		log.Warn("Some jobs were not reserved", "Not Reserved", resp.NotReserved)
 	}
 	if len(resp.Reserved) > 0 {
-		log.Info("Reserved jobs, running on agent sprites")
-
 		for i := 0; i < len(resp.Reserved); i++ {
-			err = m.runJob(ctx, resp.Reserved[i])
+			job := resp.Reserved[i]
+			err = m.runJob(ctx, job)
 			if err != nil {
 				log.Error("error running jobs", "error", err)
+			}
+			if err = m.jobStore.Delete(job); err != nil {
+				log.Error("failed to delete job from the job store, but the job finished running", "error", err)
 			}
 		}
 	}
@@ -127,14 +165,16 @@ func (m *Monitor) runJob(ctx context.Context, jobUUID string) error {
 	spr := sprites.NewAgentSprite("bk-test-1")
 
 	if err := spr.RunJob(jobUUID); err != nil {
-		return err
+		if err = m.finishJob(ctx, jobUUID, fmt.Sprintf("failed to run job: %s", jobUUID)); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 // finishJob returns a status back to Buildkite to surface failures starting an agent
-func (m *Monitor) finishJob(ctx context.Context, queueKey string, job string, msg string) error {
+func (m *Monitor) finishJob(ctx context.Context, job string, msg string) error {
 	req := stacksapi.FinishJobRequest{
 		StackKey:   m.stackKey,
 		JobUUID:    job,
@@ -144,6 +184,7 @@ func (m *Monitor) finishJob(ctx context.Context, queueKey string, job string, ms
 	_, err := m.client.FinishJob(ctx, req)
 	if err != nil {
 		log.Error("failed to finish the job", "error", err)
+		return err
 	}
 	return nil
 }

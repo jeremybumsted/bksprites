@@ -63,7 +63,7 @@ func TestReserveJobs_EmptyJobs(t *testing.T) {
 	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second)
 
 	ctx := context.Background()
-	err := monitor.reserveJobs(ctx, "default", []stacksapi.ScheduledJob{})
+	err := monitor.reserveJobs(ctx, []stacksapi.ScheduledJob{})
 
 	// Should return nil for empty jobs slice
 	assert.NoError(t, err)
@@ -74,7 +74,7 @@ func TestReserveJobs_NilJobs(t *testing.T) {
 	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second)
 
 	ctx := context.Background()
-	err := monitor.reserveJobs(ctx, "default", nil)
+	err := monitor.reserveJobs(ctx, nil)
 
 	// Should return nil for nil jobs slice
 	assert.NoError(t, err)

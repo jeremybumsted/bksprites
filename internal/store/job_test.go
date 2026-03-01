@@ -23,12 +23,12 @@ func TestJobStore_SetAndGet(t *testing.T) {
 	tests := []struct {
 		name string
 		id   string
-		job  bkJob
+		job  models.Job
 	}{
 		{
 			name: "complete job",
 			id:   "job-123",
-			job: bkJob{
+			job: models.Job{
 				Sprite:          "test-sprite",
 				Priority:        10,
 				AgentQueryRules: []string{"queue=default", "os=linux"},
@@ -42,7 +42,7 @@ func TestJobStore_SetAndGet(t *testing.T) {
 		{
 			name: "minimal job",
 			id:   "job-456",
-			job: bkJob{
+			job: models.Job{
 				Sprite:      "minimal",
 				Priority:    1,
 				ScheduledAt: now,
@@ -51,7 +51,7 @@ func TestJobStore_SetAndGet(t *testing.T) {
 		{
 			name: "job with empty fields",
 			id:   "job-789",
-			job: bkJob{
+			job: models.Job{
 				Sprite:          "",
 				Priority:        0,
 				AgentQueryRules: []string{},
@@ -89,7 +89,7 @@ func TestJobStore_GetNonExistent(t *testing.T) {
 	job, ok, err := jobStore.Get("non-existent")
 	require.NoError(t, err)
 	assert.False(t, ok)
-	assert.Equal(t, bkJob{}, job)
+	assert.Equal(t, models.Job{}, job)
 }
 
 func TestJobStore_UpdateJob(t *testing.T) {
@@ -99,7 +99,7 @@ func TestJobStore_UpdateJob(t *testing.T) {
 	now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	// Set initial job
-	job1 := bkJob{
+	job1 := models.Job{
 		Sprite:   "sprite-1",
 		Priority: 5,
 	}
@@ -107,7 +107,7 @@ func TestJobStore_UpdateJob(t *testing.T) {
 	require.NoError(t, err)
 
 	// Update the job
-	job2 := bkJob{
+	job2 := models.Job{
 		Sprite:      "sprite-2",
 		Priority:    10,
 		ScheduledAt: now,
@@ -128,7 +128,7 @@ func TestJobStore_Delete(t *testing.T) {
 	jobStore := NewJobStore(store)
 
 	// Set a job
-	job := bkJob{
+	job := models.Job{
 		Sprite:   "test-sprite",
 		Priority: 5,
 	}
@@ -164,7 +164,7 @@ func TestJobStore_KeyPrefix(t *testing.T) {
 	store := NewStore()
 	jobStore := NewJobStore(store)
 
-	job := bkJob{
+	job := models.Job{
 		Sprite:   "test-sprite",
 		Priority: 5,
 	}
@@ -189,7 +189,7 @@ func TestJobStore_StoreFull(t *testing.T) {
 	store.maxKeys = 2 // Set a small limit
 	jobStore := NewJobStore(store)
 
-	job := bkJob{
+	job := models.Job{
 		Sprite:   "test",
 		Priority: 1,
 	}
@@ -228,7 +228,7 @@ func TestJobStore_SetWithCircularReference(t *testing.T) {
 
 	jobStore := NewJobStore(store)
 
-	job1 := bkJob{
+	job1 := models.Job{
 		Sprite:   "test-1",
 		Priority: 1,
 	}
@@ -238,7 +238,7 @@ func TestJobStore_SetWithCircularReference(t *testing.T) {
 	require.NoError(t, err)
 
 	// Second set with different key should fail due to max keys
-	job2 := bkJob{
+	job2 := models.Job{
 		Sprite:   "test-2",
 		Priority: 2,
 	}

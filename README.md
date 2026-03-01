@@ -1,8 +1,7 @@
 # bksprites - Run Buildkite agents on Fly.io sprites
 
 An experimental implementation of the [Buildkite Stacks API](https://buildkite.com/docs/apis/agent-api/stacks)
-to run agents using [Sprites](https://docs.sprites.dev/), bksprites is split
-into two components, the Controller and the Manager
+to run agents using [Sprites](https://docs.sprites.dev/)
 
 ## Controller
 
@@ -15,24 +14,16 @@ It requires an agent token and queue
 
 Add the options
 
-## Manager
+## Development
 
-The Manager runs on a Sprite that has been configured to run the Buildkite agent.
-It creates a simple http server that receives job run requests, in addition to
-a /health endpoint to quickly start a warm or cold sprite during autoscaling operations
+This project uses `mise-en-place` to manage dependencies. Run `mise install`
+after cloning the repo to ensure your dependencies are up to date.
 
-The manager also ensures that the number of running agents is limited by monitoring
-against the sprites resources and the max agents value.
+## Contributing
 
-# Development
+PRs welcome 🙂 this is just an experimental repo
+to play with Sprites and the Stacks API
 
-This project uses `mise-en-place` to manage dependencies. Run `mise install` after cloning the repo
-to ensure your dependencies are up to date.
-
-# Contributing
-
-PRs welcome, this is just an experimental repo to play with Sprites and the Stacks API
-
-# License
+## License
 
 See [LICENSE](/LICENSE)
