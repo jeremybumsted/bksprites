@@ -3,4 +3,4 @@ agents:
 steps:
   - label: ":fly-io: Test Fly Builds"
     command: .buildkite/scripts/tests.sh
-    parallelism: 5
+    parallelism: 3
