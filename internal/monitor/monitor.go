@@ -51,7 +51,6 @@ func (m *Monitor) Start(ctx context.Context) error {
 			if err != nil {
 				log.Error("Error polling queue", "error", err)
 			}
-
 			if err = m.reserveJobs(ctx, jobList); err != nil {
 				log.Error("Error reserving jobs", "error", err)
 			}
@@ -82,6 +81,7 @@ func (m *Monitor) pollQueue(ctx context.Context, queueKey string) ([]stacksapi.S
 		}
 
 		if len(resp.Jobs) > 0 {
+			jobList = append(jobList, resp.Jobs...)
 			jobsProcessed += len(resp.Jobs)
 		}
 
@@ -100,6 +100,8 @@ func (m *Monitor) reserveJobs(ctx context.Context, jobs []stacksapi.ScheduledJob
 	if len(jobs) == 0 {
 		return nil
 	}
+
+	log.Info("we're in reserveJobs now", "job slice length", len(jobs))
 
 	jobUUIDs := make([]string, len(jobs))
 	for i, job := range jobs {
@@ -146,8 +148,10 @@ func (m *Monitor) reserveJobs(ctx context.Context, jobs []stacksapi.ScheduledJob
 		log.Warn("Some jobs were not reserved", "Not Reserved", resp.NotReserved)
 	}
 	if len(resp.Reserved) > 0 {
+		log.Info("We should be running jobs now?")
 		for i := 0; i < len(resp.Reserved); i++ {
 			job := resp.Reserved[i]
+			log.Info("Running this job: ", "uuid", job)
 			err = m.runJob(ctx, job)
 			if err != nil {
 				log.Error("error running jobs", "error", err)
@@ -164,12 +168,13 @@ func (m *Monitor) runJob(ctx context.Context, jobUUID string) error {
 	// This will eventually get farmed out to a sprite registry
 	spr := sprites.NewAgentSprite("bk-test-1")
 
-	if err := spr.RunJob(jobUUID); err != nil {
-		if err = m.finishJob(ctx, jobUUID, fmt.Sprintf("failed to run job: %s", jobUUID)); err != nil {
-			return err
+	go func() {
+		if err := spr.RunJob(jobUUID); err != nil {
+			if err = m.finishJob(ctx, jobUUID, fmt.Sprintf("failed to run job: %s", jobUUID)); err != nil {
+				log.Error("failed to finish job after run error", "error", err)
+			}
 		}
-	}
-
+	}()
 	return nil
 }
 
