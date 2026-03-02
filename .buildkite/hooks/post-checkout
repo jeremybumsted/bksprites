@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -euo pipefail
+
+
+echo "--- checking mise dependencies"
+
+mise trust -y
+if !mise install; then
+  echo ":warning: Failed to install project dependencies"
+  exit 1
+fi
+
