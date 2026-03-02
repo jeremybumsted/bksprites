@@ -1,8 +1,16 @@
 #!/bin/bash
 
+set -euo pipefail
+
+echo "--- Checking dependencies up to date"
 mise trust -y
+
 mise install
 
-sleep 5
+echo "--- Running :go: Tests"
 
-mise x -- gotestsum --format testname
+cd app &&
+  mise x gotestsum@latest -- gotestsum --format testname --junitfile unit-tests.xml --junitfile-testcase-classname relative -- -coverprofile=cover.out ./...
+
+echo "--- Done"
+exit 0
