@@ -2,7 +2,7 @@ agents:
   queue: sprites
 steps:
   - label: ":golangci-lint: Lint"
-    command: golangci-lint run --verbose --timeout 2m
+    command: .buildkite/scripts/lint.sh 
   - label: ":go: :test_tube: Test"
     command: .buildkite/scripts/tests.sh
     secrets:
