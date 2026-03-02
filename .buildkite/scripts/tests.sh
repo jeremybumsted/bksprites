@@ -13,8 +13,3 @@ mise x gotestsum@latest -- gotestsum --format testname --junitfile unit-tests.xm
 
 echo "--- Uploading artifacts"
 buildkite-agent artifact upload "cover.out"
-
-cat cover.out | buildkite-agent annotate --style "info" --context "gotestsum"
-
-echo "--- Annotating build"
-exit 0

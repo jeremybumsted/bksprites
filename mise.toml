@@ -1,3 +1,4 @@
 [tools]
 go = "1.25.4"
-gotestsum = "latest"
+gotestsum = "1.13.0"
+golangci-lint = "2.10.1"
