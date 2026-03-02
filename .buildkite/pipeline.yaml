@@ -3,11 +3,6 @@ agents:
 steps:
   - label: ":golangci-lint: Lint"
     command: golangci-lint run --verbose --timeout 2m
-    plugins:
-      - docker-compose#v5.12.1:
-          config: .buildkite/docker-compose.yml
-          run: golangci-lint
-          tty: true
   - label: ":go: :test_tube: Test"
     command: .buildkite/scripts/tests.sh
     secrets:
