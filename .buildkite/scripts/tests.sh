@@ -11,5 +11,10 @@ echo "--- Running :go: Tests"
 
 mise x gotestsum@latest -- gotestsum --format testname --junitfile unit-tests.xml --junitfile-testcase-classname relative -- -coverprofile=cover.out ./...
 
-echo "--- Done"
+echo "--- Uploading artifacts"
+buildkite-agent artifact upload "cover.out"
+
+cat cover.out | buildkite-agent annotate --style "info" --context "gotestsum"
+
+echo "--- Annotating build"
 exit 0

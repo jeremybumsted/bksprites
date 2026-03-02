@@ -8,5 +8,5 @@ steps:
       BUILDKITE_ANALYTICS_TOKEN: SPRITES_SUITE_TOKEN
     plugins:
       - test-collector#v1.11.0:
-          files: "*/*.xml"
+          files: "*.xml"
           format: "junit"
