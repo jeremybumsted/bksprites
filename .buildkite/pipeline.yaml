@@ -3,7 +3,6 @@ agents:
 steps:
   - label: ":go: :test_tube: Tests"
     command: .buildkite/scripts/tests.sh
-    parallelism: 3
     secrets:
       BUILDKITE_ANALYTICS_TOKEN: SPRITES_SUITE_TOKEN
     plugins:
