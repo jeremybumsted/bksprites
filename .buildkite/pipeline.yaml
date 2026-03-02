@@ -5,8 +5,8 @@ steps:
     command: .buildkite/scripts/tests.sh
     parallelism: 3
     secrets:
-          BUILDKITE_ANALYTICS_TOKEN: SPRITES_SUITE_TOKEN
+      BUILDKITE_ANALYTICS_TOKEN: SPRITES_SUITE_TOKEN
     plugins:
-      - test-collector#v1.11.0
+      - test-collector#v1.11.0:
           files: "*/*.xml"
           format: "junit"
