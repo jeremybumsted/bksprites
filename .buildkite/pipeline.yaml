@@ -2,7 +2,7 @@ agents:
   queue: sprites
 steps:
   - label: ":golangci-lint: Lint"
-    command: .buildkite/scripts/lint.sh 
+    command: .buildkite/scripts/lint.sh
   - label: ":go: :test_tube: Test"
     command: .buildkite/scripts/tests.sh
     secrets:
@@ -11,3 +11,29 @@ steps:
       - test-collector#v1.11.0:
           files: "*.xml"
           format: "junit"
+
+  # Uncomment to enable binary releases with goreleaser
+  # Requires:
+  #   1. GITHUB_TOKEN in Buildkite secrets (with contents:write permission)
+  #   2. Typically runs only on git tags (e.g., v1.0.0)
+  #   3. Can also run as snapshot build (no publish) on any commit
+  #
+  # - label: ":package: Release Binaries"
+  #   command: .buildkite/scripts/release.sh
+  #   secrets:
+  #     GITHUB_TOKEN: GITHUB_RELEASE_TOKEN
+
+  # Uncomment to enable container image builds with ko
+  # Requires:
+  #   1. GitHub Container Registry authentication:
+  #      - Set GITHUB_TOKEN in Buildkite secrets (with packages:write permission)
+  #      - Or use docker login ghcr.io in pre-command hook
+  #   2. Optional: Set TAG environment variable to override default tagging
+  #
+  # - label: ":docker: Build & Push Image"
+  #   command: .buildkite/scripts/build.sh
+  #   env:
+  #     KO_DOCKER_REPO: ghcr.io/jeremybumsted/bksprites
+  #   # Uncomment if you add GITHUB_TOKEN to Buildkite secrets:
+  #   # secrets:
+  #   #   GITHUB_TOKEN: GITHUB_CR_TOKEN
