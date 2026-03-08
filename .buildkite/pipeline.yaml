@@ -12,28 +12,43 @@ steps:
           files: "*.xml"
           format: "junit"
 
-  # Uncomment to enable binary releases with goreleaser
-  # Requires:
-  #   1. GITHUB_TOKEN in Buildkite secrets (with contents:write permission)
-  #   2. Typically runs only on git tags (e.g., v1.0.0)
-  #   3. Can also run as snapshot build (no publish) on any commit
+  # Binary builds with goreleaser
+  # Auto-detects release mode:
+  #   - No tag: Snapshot build (binaries in dist/, uploaded to Buildkite artifacts)
+  #   - With tag (e.g., v1.0.0): Full release (publishes to GitHub Releases)
   #
-  # - label: ":package: Release Binaries"
-  #   command: .buildkite/scripts/release.sh
-  #   secrets:
-  #     GITHUB_TOKEN: GITHUB_RELEASE_TOKEN
+  # Requirements:
+  #   - GITHUB_API_TOKEN only needed for tag/release builds (with contents:write permission)
+  #   - Snapshot builds work without GITHUB_API_TOKEN
+  - label: ":package: Build {{matrix.os}}/{{matrix.arch}}"
+    command: .buildkite/scripts/release.sh
+    matrix:
+      setup:
+        os: [linux, darwin, windows]
+        arch: [amd64, arm64]
+      adjustments:
+        # Windows doesn't support arm64 well
+        - with: {os: windows, arch: arm64}
+          skip: true
+    env:
+      GOOS: "{{matrix.os}}"
+      GOARCH: "{{matrix.arch}}"
+    # Only needed for tag builds:
+    # secrets:
+    #   GITHUB_API_TOKEN: GITHUB_RELEASE_TOKEN
 
-  # Uncomment to enable container image builds with ko
-  # Requires:
-  #   1. GitHub Container Registry authentication:
-  #      - Set GITHUB_TOKEN in Buildkite secrets (with packages:write permission)
-  #      - Or use docker login ghcr.io in pre-command hook
-  #   2. Optional: Set TAG environment variable to override default tagging
+  # Container image builds with ko
+  # Auto-detects release mode:
+  #   - No tag: Local Docker build (image stored in Docker daemon, not pushed)
+  #   - With tag (e.g., v1.0.0): Push to registry (multi-arch + latest tag)
   #
-  # - label: ":docker: Build & Push Image"
-  #   command: .buildkite/scripts/build.sh
-  #   env:
-  #     KO_DOCKER_REPO: ghcr.io/jeremybumsted/bksprites
-  #   # Uncomment if you add GITHUB_TOKEN to Buildkite secrets:
-  #   # secrets:
-  #   #   GITHUB_TOKEN: GITHUB_CR_TOKEN
+  # Requirements:
+  #   - GITHUB_API_TOKEN only needed for tag/release builds (with packages:write permission)
+  #   - Local builds work without GITHUB_API_TOKEN (builds to local Docker)
+  - label: ":docker: Build Container Image"
+    command: .buildkite/scripts/build.sh
+    env:
+      KO_DOCKER_REPO: ghcr.io/jeremybumsted/bksprites
+    # Only needed for tag builds:
+    # secrets:
+    #   GITHUB_API_TOKEN: GITHUB_CR_TOKEN

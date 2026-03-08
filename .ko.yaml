@@ -8,11 +8,8 @@ defaultBaseImage: cgr.dev/chainguard/static:latest
 # Override with KO_DOCKER_REPO environment variable
 defaultRepository: ghcr.io/jeremybumsted/bksprites
 
-# Multi-platform build configuration
-# Builds for both amd64 and arm64 architectures
-defaultPlatforms:
-  - linux/amd64
-  - linux/arm64
+# Note: Platforms are specified via --platform flag in build script
+# This allows for both multi-arch and single-arch builds
 
 # Build configuration
 builds:
