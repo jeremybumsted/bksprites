@@ -9,11 +9,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewAgentSprite(t *testing.T) {
+func TestNewSpriteHandler(t *testing.T) {
 	// Set environment variable for test
 	t.Setenv("SPRITE_API_TOKEN", "test-token")
 
-	sprite := NewAgentSprite("test-sprite")
+	handler := NewSpriteHandler()
+
+	assert.NotNil(t, handler)
+	assert.NotNil(t, handler.Client)
+}
+
+func TestNewSpriteHandler_EmptyToken(t *testing.T) {
+	// Unset the environment variable
+	t.Setenv("SPRITE_API_TOKEN", "")
+
+	handler := NewSpriteHandler()
+
+	assert.NotNil(t, handler)
+	assert.NotNil(t, handler.Client)
+}
+
+func TestSpriteHandler_NewAgentSprite(t *testing.T) {
+	// Set environment variable for test
+	t.Setenv("SPRITE_API_TOKEN", "test-token")
+
+	handler := NewSpriteHandler()
+	sprite := handler.NewAgentSprite("test-sprite")
 
 	assert.NotNil(t, sprite)
 	assert.Equal(t, "test-sprite", sprite.Name)
@@ -21,14 +42,24 @@ func TestNewAgentSprite(t *testing.T) {
 	// We just verify the sprite object is created properly
 }
 
-func TestNewAgentSprite_EmptyToken(t *testing.T) {
-	// Unset the environment variable
-	t.Setenv("SPRITE_API_TOKEN", "")
+func TestSpriteHandler_CreateAgentSprite(t *testing.T) {
+	t.Skip("Skipping integration test - requires valid SPRITE_API_TOKEN and Fly.io connectivity")
 
-	sprite := NewAgentSprite("test-sprite")
+	// This test requires a real API token and network connectivity
+	// It serves as documentation for how to use CreateAgentSprite
+	t.Setenv("SPRITE_API_TOKEN", "your-token-here")
+
+	handler := NewSpriteHandler()
+	sprite, err := handler.CreateAgentSprite("test-sprite")
+
+	if err != nil {
+		t.Logf("Expected error without valid token/connectivity: %v", err)
+		return
+	}
 
 	assert.NotNil(t, sprite)
-	assert.Equal(t, "test-sprite", sprite.Name)
+	assert.NotEmpty(t, sprite.Name)
+	assert.NotEmpty(t, sprite.Address)
 }
 
 func TestIsRetryableRunError(t *testing.T) {

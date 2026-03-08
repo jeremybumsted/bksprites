@@ -20,9 +20,18 @@ type ControllerCmd struct {
 	StackKey     string `help:"unique stack key" default:"bk-sprites"`
 	Queue        string `help:"queue the stack will monitor" default:"default"`
 	PollInterval string `help:"Poll interval" default:"1s" env:"POLL_INTERVAL"`
+	LogLevel     string `help:"Log level (debug, info, warn, error)" default:"info" env:"LOG_LEVEL"`
 }
 
 func (c *ControllerCmd) Run() error {
+	// Set log level
+	level, err := log.ParseLevel(c.LogLevel)
+	if err != nil {
+		log.Warn("Invalid log level, using info", "level", c.LogLevel)
+		level = log.InfoLevel
+	}
+	log.SetLevel(level)
+
 	ctx := context.Background()
 	log.Info("Starting controller")
 	log.Info(fmt.Sprintf("Stack Key: %v", c.StackKey))

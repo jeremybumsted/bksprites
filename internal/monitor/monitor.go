@@ -15,11 +15,12 @@ import (
 )
 
 type Monitor struct {
-	client   *stacksapi.Client
-	stackKey string
-	queue    string
-	interval time.Duration
-	jobStore *store.JobStore
+	client        *stacksapi.Client
+	spriteHandler *sprites.SpriteHandler
+	stackKey      string
+	queue         string
+	interval      time.Duration
+	jobStore      *store.JobStore
 }
 
 func NewMonitor(client *stacksapi.Client, stackKey string, queue string, interval time.Duration) *Monitor {
@@ -27,11 +28,12 @@ func NewMonitor(client *stacksapi.Client, stackKey string, queue string, interva
 	js := store.NewJobStore(s)
 
 	return &Monitor{
-		client:   client,
-		stackKey: stackKey,
-		queue:    queue,
-		interval: interval,
-		jobStore: js,
+		client:        client,
+		spriteHandler: sprites.NewSpriteHandler(),
+		stackKey:      stackKey,
+		queue:         queue,
+		interval:      interval,
+		jobStore:      js,
 	}
 }
 
@@ -148,7 +150,6 @@ func (m *Monitor) reserveJobs(ctx context.Context, jobs []stacksapi.ScheduledJob
 		log.Warn("Some jobs were not reserved", "Not Reserved", resp.NotReserved)
 	}
 	if len(resp.Reserved) > 0 {
-		log.Info("We should be running jobs now?")
 		for i := 0; i < len(resp.Reserved); i++ {
 			job := resp.Reserved[i]
 			log.Info("Running this job: ", "uuid", job)
@@ -166,7 +167,7 @@ func (m *Monitor) reserveJobs(ctx context.Context, jobs []stacksapi.ScheduledJob
 
 func (m *Monitor) runJob(ctx context.Context, jobUUID string) error {
 	// This will eventually get farmed out to a sprite registry
-	spr := sprites.NewAgentSprite("bk-test-1")
+	spr := m.spriteHandler.NewAgentSprite("bk-test-1")
 
 	go func() {
 		if err := spr.RunJob(jobUUID); err != nil {

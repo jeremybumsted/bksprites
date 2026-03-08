@@ -4,10 +4,12 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/jeremybumsted/bksprites/cmd/controller"
+	"github.com/jeremybumsted/bksprites/cmd/create"
 )
 
 var cli struct {
 	Controller controller.ControllerCmd `cmd:"" help:"start an instance of the sprite stack controller"`
+	Create     create.CreateCmd         `cmd:"" help:"create a new pre-configured sprite"`
 }
 
 func main() {
