@@ -9,7 +9,7 @@ mise install
 
 echo "--- Running :go: Tests"
 
-mise x gotestsum@latest -- gotestsum --format testname --junitfile unit-tests.xml --junitfile-testcase-classname relative -- -coverprofile=cover.out ./...
+mise x -- gotestsum --format testname --junitfile unit-tests.xml --junitfile-testcase-classname relative -- -coverprofile=cover.out ./...
 
 echo "--- Uploading artifacts"
 buildkite-agent artifact upload "cover.out"

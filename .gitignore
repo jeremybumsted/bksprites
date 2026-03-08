@@ -1,2 +1,12 @@
 .sprite
 cover*
+
+# GoReleaser build artifacts
+dist/
+*.tar.gz
+*.zip
+checksums.txt
+.goreleaser.tmp.yaml
+
+# Built binaries
+bksprites

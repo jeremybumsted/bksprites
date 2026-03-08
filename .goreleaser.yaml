@@ -1,0 +1,124 @@
+# GoReleaser configuration for bksprites
+# See: https://goreleaser.com/customization/
+
+version: 2
+
+before:
+  hooks:
+    # Ensure dependencies are up to date
+    - go mod tidy
+
+builds:
+  - id: bksprites
+    main: .
+    binary: bksprites
+
+    # Build for multiple platforms
+    goos:
+      - linux
+      - darwin
+      - windows
+
+    goarch:
+      - amd64
+      - arm64
+
+    # Windows doesn't support arm64 well yet
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+    # Build flags
+    env:
+      - CGO_ENABLED=0
+
+    flags:
+      - -trimpath
+
+    # Inject version information via ldflags
+    ldflags:
+      - -s
+      - -w
+      - -X main.Version={{.Version}}
+      - -X main.CommitSHA={{.ShortCommit}}
+      - -X main.BuildTime={{.Date}}
+
+archives:
+  - id: default
+    # Archive name template
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+
+    # Archive formats by OS
+    formats:
+      - tar.gz  # Default for all
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+    # Files to include in archive
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+changelog:
+  # Group commits by type
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - 'README'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  # GitHub release configuration
+  github:
+    owner: jeremybumsted
+    name: bksprites
+
+  # Draft release for manual review
+  draft: false
+
+  # Mark as prerelease if version contains alpha, beta, rc
+  prerelease: auto
+
+  # Release name
+  name_template: "{{.ProjectName}} {{.Version}}"
+
+  # Release footer
+  footer: |
+    ## Container Images
+
+    Multi-arch container images are also available:
+    ```bash
+    docker pull ghcr.io/jeremybumsted/bksprites:{{.Version}}
+    ```
+
+    **Full Changelog**: https://github.com/jeremybumsted/bksprites/compare/{{.PreviousTag}}...{{.Tag}}
+
+# Snapshot builds (for non-tag builds)
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# Metadata
+metadata:
+  mod_timestamp: '{{ .CommitTimestamp }}'

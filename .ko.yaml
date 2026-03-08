@@ -1,0 +1,27 @@
+# ko configuration for building bksprites container images
+# See: https://ko.build/configuration/
+
+# Default base image - using Chainguard static for minimal, secure images
+defaultBaseImage: cgr.dev/chainguard/static:latest
+
+# Default repository for pushing images
+# Override with KO_DOCKER_REPO environment variable
+defaultRepository: ghcr.io/jeremybumsted/bksprites
+
+# Note: Platforms are specified via --platform flag in build script
+# This allows for both multi-arch and single-arch builds
+
+# Build configuration
+builds:
+  - id: bksprites
+    main: .
+    # Use static linking for compatibility with distroless/static base
+    env:
+      - CGO_ENABLED=0
+    # Go build flags for optimization
+    flags:
+      - -trimpath
+    ldflags:
+      - -s
+      - -w
+      - -extldflags=-static
