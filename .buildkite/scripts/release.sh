@@ -104,10 +104,10 @@ fi
 # Run goreleaser
 if [ "$RELEASE_MODE" = "release" ]; then
   echo "Building and releasing binaries..."
-  mise x goreleaser@latest -- goreleaser release --clean --config="$CONFIG_FILE"
+  mise x -- goreleaser release --clean --config="$CONFIG_FILE"
 else
   echo "Building snapshot (not publishing)..."
-  mise x goreleaser@latest -- goreleaser release --snapshot --clean --skip=publish --config="$CONFIG_FILE"
+  mise x -- goreleaser release --snapshot --clean --skip=publish --config="$CONFIG_FILE"
 fi
 
 # Cleanup temporary config

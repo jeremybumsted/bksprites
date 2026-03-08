@@ -51,7 +51,7 @@ if [ -n "${GOARCH:-}" ]; then
   fi
 
   # Build image (with or without push)
-  mise x ko@latest -- ko build \
+  mise x -- ko build \
     --tags="${IMAGE_TAG}" \
     --bare \
     ${LOCAL_BUILD} \
@@ -68,7 +68,7 @@ else
   fi
 
   # Build image (with or without push)
-  mise x ko@latest -- ko build \
+  mise x -- ko build \
     --platform="${PLATFORMS}" \
     --tags="${IMAGE_TAG}" \
     --bare \
@@ -87,7 +87,7 @@ fi
 # Also tag as 'latest' if this is a git tag build (only for multi-arch)
 if [ -n "${BUILDKITE_TAG:-}" ] && [ -z "${GOARCH:-}" ]; then
   echo "--- :label: Tagging as latest"
-  mise x ko@latest -- ko build \
+  mise x -- ko build \
     --platform="${PLATFORMS}" \
     --tags="latest" \
     --bare \
