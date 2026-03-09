@@ -1,6 +1,6 @@
-// Package models provides the type definitions
+// Package types provides the type definitions
 // for models used by the controller
-package models
+package types
 
 import "time"
 

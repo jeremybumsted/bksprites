@@ -9,8 +9,8 @@ import (
 	"github.com/buildkite/stacksapi"
 	"github.com/charmbracelet/log"
 
-	"github.com/jeremybumsted/bksprites/internal/models"
 	"github.com/jeremybumsted/bksprites/internal/sprites"
+	"github.com/jeremybumsted/bksprites/internal/types"
 	"github.com/jeremybumsted/bksprites/internal/store"
 )
 
@@ -107,20 +107,20 @@ func (m *Monitor) reserveJobs(ctx context.Context, jobs []stacksapi.ScheduledJob
 
 	jobUUIDs := make([]string, len(jobs))
 	for i, job := range jobs {
-		bkJob := models.Job{
+		bkJob := types.Job{
 			Priority:        job.Priority,
 			AgentQueryRules: job.AgentQueryRules,
 			ScheduledAt:     job.ScheduledAt,
-			Pipeline: models.Pipeline{
+			Pipeline: types.Pipeline{
 				Slug: job.Pipeline.Slug,
 				UUID: job.Pipeline.UUID,
 			},
-			Build: models.Build{
+			Build: types.Build{
 				Number: job.Build.Number,
 				Branch: job.Build.Branch,
 				UUID:   job.Build.UUID,
 			},
-			Step: models.Step{
+			Step: types.Step{
 				Key: job.Step.Key,
 			},
 		}

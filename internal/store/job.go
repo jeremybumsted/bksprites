@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 
 	"github.com/charmbracelet/log"
-	"github.com/jeremybumsted/bksprites/internal/models"
+	"github.com/jeremybumsted/bksprites/internal/types"
 )
 
 type Job interface {
-	Set(id string, j models.Job) error
-	Get(id string) (models.Job, bool, error)
+	Set(id string, j types.Job) error
+	Get(id string) (types.Job, bool, error)
 	Delete(id string) error
 }
 
@@ -23,7 +23,7 @@ func NewJobStore(store *Store) *JobStore {
 	}
 }
 
-func (js *JobStore) Set(id string, j models.Job) error {
+func (js *JobStore) Set(id string, j types.Job) error {
 	b, err := json.Marshal(j)
 	if err != nil {
 		return err
@@ -32,16 +32,16 @@ func (js *JobStore) Set(id string, j models.Job) error {
 	return js.store.Set("job:"+id, string(b), 0)
 }
 
-func (js *JobStore) Get(id string) (models.Job, bool, error) {
+func (js *JobStore) Get(id string) (types.Job, bool, error) {
 	raw, ok := js.store.Get("job:" + id)
 	if !ok {
-		return models.Job{}, false, nil
+		return types.Job{}, false, nil
 	}
 
-	var j models.Job
+	var j types.Job
 
 	if err := json.Unmarshal([]byte(raw), &j); err != nil {
-		return models.Job{}, false, err
+		return types.Job{}, false, err
 	}
 
 	return j, true, nil
