@@ -115,19 +115,3 @@ func isRetryableRunError(err error) bool {
 		strings.Contains(msg, "failed to connect") ||
 		strings.Contains(msg, "connection reset by peer")
 }
-
-func (s *SpriteHandler) CreateAgentSprite(name string) (*AgentSprite, error) {
-	ctx := context.Background()
-
-	r, err := s.Client.CreateSprite(ctx, name, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	as := AgentSprite{
-		Name:    r.Name(),
-		Address: r.URL,
-	}
-
-	return &as, nil
-}
