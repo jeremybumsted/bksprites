@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	logwriter "github.com/jeremybumsted/bksprites/internal/log"
 	sprites "github.com/superfly/sprites-go"
 )
 
@@ -26,8 +27,9 @@ type SpriteHandler struct {
 }
 
 type AgentSprite struct {
-	Name    string // This is the name of the sprite the agent will be run on.
-	Address string // This is the ip address of the sprite
+	Name    string          // This is the name of the sprite the agent will be run on.
+	Address string          // This is the ip address of the sprite
+	Client  *sprites.Client // Sprites client for API calls
 	// command sprites.Command  <- Don't know if this is useful yet.
 }
 
@@ -38,22 +40,37 @@ func NewSpriteHandler() *SpriteHandler {
 	}
 }
 
+func NewSpriteHandlerWithToken(token string) *SpriteHandler {
+	if token == "" {
+		log.Error("SPRITE_API_TOKEN is empty - authentication will fail")
+	} else {
+		log.Debug("Creating sprite handler", "tokenLength", len(token), "tokenPrefix", token[:min(10, len(token))])
+	}
+	return &SpriteHandler{
+		Client: sprites.New(token),
+	}
+}
+
 func (s *SpriteHandler) NewAgentSprite(name string) *AgentSprite {
+	if s.Client == nil {
+		log.Error("SpriteHandler.Client is nil - cannot create AgentSprite")
+	}
 	sprite := s.Client.Sprite(name)
 	addr := sprite.URL
+
+	log.Debug("Created AgentSprite", "name", name, "address", addr, "clientSet", s.Client != nil)
 
 	return &AgentSprite{
 		Name:    name,
 		Address: addr,
+		Client:  s.Client,
 	}
 }
 
 func (a *AgentSprite) RunJob(jobUUID string) error {
 	log.Info("We'll run this job", "uuid", jobUUID)
 
-	spriteAuthToken := os.Getenv("SPRITE_API_TOKEN")
-	client := sprites.New(spriteAuthToken)
-	sprite := client.Sprite(a.Name)
+	sprite := a.Client.Sprite(a.Name)
 
 	var err error
 	for attempt := 1; attempt <= spriteRunMaxAttempts; attempt++ {
@@ -68,8 +85,8 @@ func (a *AgentSprite) RunJob(jobUUID string) error {
 		)
 
 		// Redirect output to structured logging
-		stdoutWriter := newLogWriter(agentLogger, log.DebugLevel)
-		stderrWriter := newLogWriter(agentLogger, log.WarnLevel)
+		stdoutWriter := logwriter.NewLogWriter(agentLogger, log.DebugLevel)
+		stderrWriter := logwriter.NewLogWriter(agentLogger, log.WarnLevel)
 		cmd.Stdout = stdoutWriter
 		cmd.Stderr = stderrWriter
 

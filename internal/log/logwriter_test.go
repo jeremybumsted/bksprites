@@ -1,4 +1,4 @@
-package sprites
+package log
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ func TestLogWriter_SingleCompleteLine(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false) // Disable timestamp for easier testing
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write a complete line
 	n, err := writer.Write([]byte("hello world\n"))
@@ -37,7 +37,7 @@ func TestLogWriter_MultipleLines(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write multiple complete lines at once
 	n, err := writer.Write([]byte("line1\nline2\nline3\n"))
@@ -64,7 +64,7 @@ func TestLogWriter_PartialLine(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write partial line (no newline)
 	n, err := writer.Write([]byte("hello"))
@@ -86,7 +86,7 @@ func TestLogWriter_PartialThenComplete(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write "hello" (no newline)
 	n, err := writer.Write([]byte("hello"))
@@ -115,7 +115,7 @@ func TestLogWriter_FlushPartialLine(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write "incomplete" (no newline)
 	n, err := writer.Write([]byte("incomplete"))
@@ -142,7 +142,7 @@ func TestLogWriter_Close(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write partial line
 	n, err := writer.Write([]byte("partial"))
@@ -200,7 +200,7 @@ func TestLogWriter_DifferentLevels(t *testing.T) {
 			logger.SetReportTimestamp(false)
 			logger.SetLevel(log.DebugLevel) // Set to debug to capture all levels
 
-			writer := newLogWriter(logger, tt.level)
+			writer := NewLogWriter(logger, tt.level)
 
 			// Write a complete line
 			_, err := writer.Write([]byte("test message\n"))
@@ -220,7 +220,7 @@ func TestLogWriter_EmptyWrites(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write empty byte slice
 	n, err := writer.Write([]byte{})
@@ -245,7 +245,7 @@ func TestLogWriter_MultipleNewlines(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write with multiple consecutive newlines
 	_, err := writer.Write([]byte("line1\n\nline2\n"))
@@ -269,13 +269,13 @@ func TestLogWriter_ConcurrentWrites(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	const numGoroutines = 10
 	const numWrites = 100
 	var wg sync.WaitGroup
 
-	// Launch multiple goroutines writing to same logWriter
+	// Launch multiple goroutines writing to same LogWriter
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
 		go func(id int) {
@@ -313,7 +313,7 @@ func TestLogWriter_MixedPartialAndComplete(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write sequence: partial, complete, partial, complete
 	_, err := writer.Write([]byte("part1 "))
@@ -345,7 +345,7 @@ func TestLogWriter_LargeWrites(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Build a large string with multiple lines
 	var largeData bytes.Buffer
@@ -383,7 +383,7 @@ func TestLogWriter_EmptyLineHandling(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write just a newline (empty line)
 	_, err := writer.Write([]byte("\n"))
@@ -404,7 +404,7 @@ func TestLogWriter_DefaultLevel(t *testing.T) {
 	logger.SetReportTimestamp(false)
 
 	// Use an arbitrary level value that's not defined
-	writer := newLogWriter(logger, log.Level(999))
+	writer := NewLogWriter(logger, log.Level(999))
 
 	// Write a line
 	_, err := writer.Write([]byte("test\n"))
@@ -422,7 +422,7 @@ func TestLogWriter_FlushEmpty(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Flush with empty buffer
 	writer.Flush()
@@ -437,7 +437,7 @@ func TestLogWriter_ConsecutiveFlushes(t *testing.T) {
 	logger := log.New(&buf)
 	logger.SetReportTimestamp(false)
 
-	writer := newLogWriter(logger, log.InfoLevel)
+	writer := NewLogWriter(logger, log.InfoLevel)
 
 	// Write partial data
 	_, err := writer.Write([]byte("data"))

@@ -1,4 +1,4 @@
-package sprites
+package log
 
 import (
 	"bytes"
@@ -7,18 +7,18 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// logWriter implements io.Writer that sends output to charmbracelet/log.
+// LogWriter implements io.Writer that sends output to charmbracelet/log.
 // It buffers writes until a newline is encountered, then logs the complete line.
-type logWriter struct {
+type LogWriter struct {
 	logger *log.Logger
 	level  log.Level
 	mu     sync.Mutex
 	buf    []byte
 }
 
-// newLogWriter creates a new logWriter that logs to the given logger at the specified level.
-func newLogWriter(logger *log.Logger, level log.Level) *logWriter {
-	return &logWriter{
+// NewLogWriter creates a new LogWriter that logs to the given logger at the specified level.
+func NewLogWriter(logger *log.Logger, level log.Level) *LogWriter {
+	return &LogWriter{
 		logger: logger,
 		level:  level,
 		buf:    make([]byte, 0, 256),
@@ -27,7 +27,7 @@ func newLogWriter(logger *log.Logger, level log.Level) *logWriter {
 
 // Write implements io.Writer. It buffers input until complete lines are received,
 // then logs each line at the configured level.
-func (w *logWriter) Write(p []byte) (n int, err error) {
+func (w *LogWriter) Write(p []byte) (n int, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -50,7 +50,7 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 }
 
 // logLine logs a single line at the configured level.
-func (w *logWriter) logLine(line string) {
+func (w *LogWriter) logLine(line string) {
 	switch w.level {
 	case log.DebugLevel:
 		w.logger.Debug(line)
@@ -66,7 +66,7 @@ func (w *logWriter) logLine(line string) {
 }
 
 // Flush logs any remaining buffered data, even if it doesn't end with a newline.
-func (w *logWriter) Flush() {
+func (w *LogWriter) Flush() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -78,7 +78,7 @@ func (w *logWriter) Flush() {
 }
 
 // Close flushes any remaining buffered data and closes the writer.
-func (w *logWriter) Close() error {
+func (w *LogWriter) Close() error {
 	w.Flush()
 	return nil
 }

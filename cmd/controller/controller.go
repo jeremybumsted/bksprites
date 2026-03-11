@@ -17,6 +17,7 @@ import (
 
 type ControllerCmd struct {
 	AgentToken   string `help:"Buildkite agent token" env:"BUILDKITE_AGENT_TOKEN" required:""`
+	SpriteToken  string `help:"Sprites API token" env:"SPRITE_API_TOKEN" required:""`
 	StackKey     string `help:"unique stack key" default:"bk-sprites"`
 	Queue        string `help:"queue the stack will monitor" default:"default"`
 	PollInterval string `help:"Poll interval" default:"1s" env:"POLL_INTERVAL"`
@@ -36,6 +37,13 @@ func (c *ControllerCmd) Run() error {
 	log.Info("Starting controller")
 	log.Info(fmt.Sprintf("Stack Key: %v", c.StackKey))
 	log.Info(fmt.Sprintf("Queue: %v", c.Queue))
+
+	// Verify sprite token is set
+	if c.SpriteToken == "" {
+		log.Error("SPRITE_API_TOKEN is empty - sprites authentication will fail")
+		os.Exit(1)
+	}
+	log.Debug("Sprite token configured", "tokenLength", len(c.SpriteToken))
 
 	client, err := stacksapi.NewClient(c.AgentToken)
 	if err != nil {
@@ -61,7 +69,7 @@ func (c *ControllerCmd) Run() error {
 		return err
 	}
 
-	queueMonitor := monitor.NewMonitor(client, c.StackKey, c.Queue, pollInterval)
+	queueMonitor := monitor.NewMonitor(client, c.StackKey, c.Queue, pollInterval, c.SpriteToken)
 	go func() {
 		if err := queueMonitor.Start(ctx); err != nil && err != context.Canceled {
 			log.Error("There was a monitor error", "error", err)

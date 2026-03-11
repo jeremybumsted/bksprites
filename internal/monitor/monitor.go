@@ -23,13 +23,13 @@ type Monitor struct {
 	jobStore      *store.JobStore
 }
 
-func NewMonitor(client *stacksapi.Client, stackKey string, queue string, interval time.Duration) *Monitor {
+func NewMonitor(client *stacksapi.Client, stackKey string, queue string, interval time.Duration, spriteToken string) *Monitor {
 	s := store.NewStore()
 	js := store.NewJobStore(s)
 
 	return &Monitor{
 		client:        client,
-		spriteHandler: sprites.NewSpriteHandler(),
+		spriteHandler: sprites.NewSpriteHandlerWithToken(spriteToken),
 		stackKey:      stackKey,
 		queue:         queue,
 		interval:      interval,
@@ -171,7 +171,8 @@ func (m *Monitor) runJob(ctx context.Context, jobUUID string) error {
 
 	go func() {
 		if err := spr.RunJob(jobUUID); err != nil {
-			if err = m.finishJob(ctx, jobUUID, fmt.Sprintf("failed to run job: %s", jobUUID)); err != nil {
+			log.Error("failed to run job on sprite", "jobUUID", jobUUID, "error", err)
+			if err = m.finishJob(ctx, jobUUID, fmt.Sprintf("failed to run job %s: %v", jobUUID, err)); err != nil {
 				log.Error("failed to finish job after run error", "error", err)
 			}
 		}

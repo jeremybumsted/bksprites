@@ -40,7 +40,7 @@ func TestNewMonitor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := &stacksapi.Client{}
-			monitor := NewMonitor(client, tt.stackKey, tt.queue, tt.interval)
+			monitor := NewMonitor(client, tt.stackKey, tt.queue, tt.interval, "test-token")
 
 			assert.NotNil(t, monitor)
 			assert.Equal(t, client, monitor.client)
@@ -53,7 +53,7 @@ func TestNewMonitor(t *testing.T) {
 
 func TestNewMonitor_NilClient(t *testing.T) {
 	// Verify that NewMonitor accepts a nil client (it's up to the caller to provide a valid one)
-	monitor := NewMonitor(nil, "test-stack", "default", 30*time.Second)
+	monitor := NewMonitor(nil, "test-stack", "default", 30*time.Second, "test-token")
 
 	assert.NotNil(t, monitor)
 	assert.Nil(t, monitor.client)
@@ -61,7 +61,7 @@ func TestNewMonitor_NilClient(t *testing.T) {
 
 func TestReserveJobs_EmptyJobs(t *testing.T) {
 	client := &stacksapi.Client{}
-	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second)
+	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second, "test-token")
 
 	ctx := context.Background()
 	err := monitor.reserveJobs(ctx, []stacksapi.ScheduledJob{})
@@ -72,7 +72,7 @@ func TestReserveJobs_EmptyJobs(t *testing.T) {
 
 func TestReserveJobs_NilJobs(t *testing.T) {
 	client := &stacksapi.Client{}
-	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second)
+	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second, "test-token")
 
 	ctx := context.Background()
 	err := monitor.reserveJobs(ctx, nil)
@@ -83,7 +83,7 @@ func TestReserveJobs_NilJobs(t *testing.T) {
 
 func TestRunJob_ExecutesWithoutPanic(t *testing.T) {
 	client := &stacksapi.Client{}
-	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second)
+	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second, "test-token")
 
 	ctx := context.Background()
 
@@ -97,7 +97,7 @@ func TestRunJob_ExecutesWithoutPanic(t *testing.T) {
 
 func TestRunJob_GoroutineExecutes(t *testing.T) {
 	client := &stacksapi.Client{}
-	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second)
+	monitor := NewMonitor(client, "test-stack", "default", 30*time.Second, "test-token")
 
 	ctx := context.Background()
 
